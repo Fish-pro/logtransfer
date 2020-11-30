@@ -5,11 +5,28 @@ import (
 	"fmt"
 	"github.com/olivere/elastic/v7"
 	"strings"
+	"time"
 )
 
-var client *elastic.Client
+type LogData struct {
+	Topic string `json:"topic"`
+	Obj   Msg    `json:"obj"`
+}
 
-func Init(address string) error {
+type Msg struct {
+	Data string `json:"data"`
+}
+
+var (
+	client *elastic.Client
+	ch     chan *LogData
+)
+
+func SendToES(msg *LogData) {
+	ch <- msg
+}
+
+func Init(address string, chanSize, gSize int) error {
 	if !strings.HasPrefix(address, "http://") {
 		address = "http://" + address
 	}
@@ -19,18 +36,29 @@ func Init(address string) error {
 		fmt.Printf("connect to es error:%v\n", err)
 		return err
 	}
+	ch = make(chan *LogData, chanSize)
+	for i := 1; i <= gSize; i++ {
+		go run()
+	}
 	return nil
 }
 
-func SendToES(indexStr string, data interface{}) error {
-	put1, err := client.Index().
-		Index(indexStr).
-		BodyJson(data).
-		Do(context.Background())
-	if err != nil {
-		fmt.Printf("save data to es error:%v\n", err)
-		return err
+func run() {
+	for {
+		select {
+		case msg := <-ch:
+			put1, err := client.Index().
+				Index(msg.Topic).
+				BodyJson(msg.Obj).
+				Do(context.Background())
+			if err != nil {
+				fmt.Printf("save data to es error:%v\n", err)
+				continue
+			}
+			fmt.Printf("Indexed user %s to index %s, type %s\n", put1.Id, put1.Index, put1.Type)
+		default:
+			time.Sleep(time.Second)
+		}
 	}
-	fmt.Printf("Indexed user %s to index %s, type %s\n", put1.Id, put1.Index, put1.Type)
-	return nil
+
 }

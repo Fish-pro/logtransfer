@@ -6,10 +6,6 @@ import (
 	"github.com/Shopify/sarama"
 )
 
-type LogData struct {
-	Data string `json:"data"`
-}
-
 func Init(address []string, topic string) error {
 	consumer, err := sarama.NewConsumer(address, nil)
 	if err != nil {
@@ -35,14 +31,13 @@ func Init(address []string, topic string) error {
 			for msg := range pc.Messages() {
 				fmt.Printf("Partition:%d Offset:%d Key:%v Value:%s\n", msg.Partition, msg.Offset, msg.Key, string(msg.Value))
 				// 直接给es
-				ld := LogData{
-					Data: string(msg.Value),
+				ld := es.LogData{
+					Obj: es.Msg{
+						Data: string(msg.Value),
+					},
+					Topic: topic,
 				}
-				err := es.SendToES(topic, ld)
-				if err != nil {
-					fmt.Printf("send to es error:%v\n", err)
-					continue
-				}
+				es.SendToES(&ld)
 			}
 		}(pc)
 	}

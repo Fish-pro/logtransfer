@@ -20,7 +20,7 @@ func main() {
 	fmt.Printf("config file:%v\n", conf)
 
 	// 1.初始化es
-	err = es.Init(conf.Es.Address)
+	err = es.Init(conf.Es.Address, conf.Es.ChanSize, conf.Es.GSize)
 	if err != nil {
 		fmt.Printf("init es failed,err:%v\n", err)
 		os.Exit(1)

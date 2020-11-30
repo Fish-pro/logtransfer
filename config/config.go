@@ -11,5 +11,7 @@ type KafkaConfig struct {
 }
 
 type EsConfig struct {
-	Address string `ini:"address"`
+	Address  string `ini:"address"`
+	ChanSize int    `ini:"chan_size"`
+	GSize    int    `ini:"g_size"`
 }
